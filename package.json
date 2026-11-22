@@ -1,0 +1,30 @@
+{
+  "dependencies": {
+    "@playwright/test": "^1.65.1",
+    "@turbodocx/html-to-docx": "^1.23.3",
+    "marked": "^18.2.1",
+    "sanitize-html": "^2.18.2"
+  },
+  "name": "boom-doc",
+  "version": "0.1.0",
+  "license": "MIT",
+  "description": "Generate editable Markdown manuals from Playwright tests",
+  "bin": {"boom-doc": "./cli.js"},
+  "exports": {"./fixture": {"types": "./fixture.ts", "default": "./fixture.js"}},
+  "engines": {"node": ">=24"},
+  "type": "module",
+  "scripts": {
+    "prepack": "node build.mjs",
+    "test": "node --test tests/release.test.mjs",
+    "manual": "node cli.ts"
+  },
+  "files": [
+    "cli.js",
+    "fixture.js",
+    "fixture.ts",
+    "reporter.js",
+    "go.mod",
+    "render.go",
+    "update.go"
+  ]
+}
