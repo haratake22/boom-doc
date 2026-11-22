@@ -52,6 +52,19 @@ npx boom-doc export manual/manual.md manual/guide.docx
 
 ## 開発・ライセンス
 
+GitHub Flowを採用します。最新の `main` から変更ごとに作業ブランチを作り、`main` 宛てのプルリクエストでCIの成功を確認してマージします。マージ後は作業ブランチを削除します。
+
+ブランチ名は `<種類>/<変更内容>` とし、変更内容は英小文字と数字を使い、単語をハイフンで区切ります。種類は変更の主目的で選びます。
+
+| 種類 | 用途 | 例 |
+|---|---|---|
+| `feat` | 機能追加 | `feat/parallel-image-hashing` |
+| `fix` | 不具合修正 | `fix/preserve-manual-notes` |
+| `docs` | ドキュメント | `docs/branch-naming` |
+| `test` | テストの追加・修正 | `test/chapter-order` |
+| `refactor` | 動作を保つ実装修正 | `refactor/markdown-merge` |
+| `chore` | 依存関係・CI・リリース準備 | `chore/update-playwright` |
+
 boom-docディレクトリで `npm ci`、`npx playwright install chromium`、`npm test` を順に実行すると、配布ファイルを別プロジェクトに導入して生成・更新・出力を検証します。
 
 [MIT License](LICENSE)
