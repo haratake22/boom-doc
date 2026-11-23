@@ -74,3 +74,24 @@ func TestUpdateEditedManual(t *testing.T) {
 		})
 	}
 }
+
+// A note between two generated steps must not silently attach to the other
+// step when their order is reversed.
+func TestMoveAnnotatedStep(t *testing.T) {
+	dir := t.TempDir()
+	const first = "1. Open\n\n   ![screen](a.png)\n"
+	const second = "1. Save\n\n   ![screen](b.png)\n"
+	original := first + "\n" + second
+	edited := first + "\n   Note on Open\n\n" + second
+	if err := saveDraft(dir, original); err != nil {
+		t.Fatal(err)
+	}
+	manual := filepath.Join(dir, "manual.md")
+	put(t, manual, edited)
+	if err := saveDraft(dir, second+"\n"+first); err == nil {
+		t.Fatal("expected ambiguous move to require review")
+	}
+	if contents(t, manual) != edited || contents(t, filepath.Join(dir, ".boom-base.md")) != original {
+		t.Fatal("move conflict changed the edited manual or its baseline")
+	}
+}
