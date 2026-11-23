@@ -15,7 +15,7 @@
   "type": "module",
   "scripts": {
     "prepack": "node build.mjs",
-    "test": "node --test tests/release.test.mjs",
+    "test": "node --test tests/reporter.test.mjs tests/release.test.mjs",
     "manual": "node cli.ts"
   },
   "files": [
