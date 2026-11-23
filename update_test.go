@@ -44,6 +44,7 @@ func TestUpdateEditedManual(t *testing.T) {
 		name, manual, draft, want string
 		conflict                  bool
 	}{
+		{"edit already matches new draft", "New\n", "New\n", "New\n", false},
 		{"append note", base + "Note\n", "New\n", "New\nNote\n", false},
 		{"separate edits", "Start\n\nDetails\n\nSave\n", "Open\n\nDetails\n\nSubmit\n", "Start\n\nDetails\n\nSubmit\n", false},
 		{"overlapping edits", "Human\n\nDetails\n\nSave\n", "Generated\n\nDetails\n\nSave\n", "Human\n\nDetails\n\nSave\n", true},
