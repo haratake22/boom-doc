@@ -1,7 +1,5 @@
 node_modules/
 test-results/
 /TASKS.md
-/cli.js
-/fixture.js
-/reporter.js
+/dist/
 /*.tgz

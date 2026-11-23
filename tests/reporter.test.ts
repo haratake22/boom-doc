@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import ManualReporter from '../reporter.ts';
+import ManualReporter from '../src/reporter.ts';
 
 function recordPath(t: TestContext) {
   const dir = mkdtempSync(join(tmpdir(), 'boom-reporter-'));

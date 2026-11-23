@@ -9,23 +9,22 @@
   "version": "0.1.0",
   "license": "MIT",
   "description": "Generate editable Markdown manuals from Playwright tests",
-  "bin": {"boom-doc": "./cli.js"},
-  "exports": {"./fixture": {"types": "./fixture.ts", "default": "./fixture.js"}},
+  "bin": {"boom-doc": "./dist/cli.js"},
+  "exports": {"./fixture": {"types": "./src/fixture.ts", "default": "./dist/fixture.js"}},
   "engines": {"node": ">=24"},
   "type": "module",
   "scripts": {
-    "prepack": "node build.mjs",
+    "prepack": "node scripts/build.mjs",
     "test": "tsc -p tests && node --test tests/reporter.test.ts tests/release.test.ts",
-    "manual": "node cli.ts"
+    "manual": "node src/cli.ts"
   },
   "files": [
-    "cli.js",
-    "fixture.js",
-    "fixture.ts",
-    "reporter.js",
+    "dist/*.js",
+    "src/fixture.ts",
     "go.mod",
-    "render.go",
-    "update.go"
+    "internal/manual/main.go",
+    "internal/manual/render.go",
+    "internal/manual/update.go"
   ],
   "devDependencies": {
     "@types/node": "^24.19.2",

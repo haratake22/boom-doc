@@ -58,6 +58,8 @@ npx boom-doc export manual/manual.md manual/guide.docx
 
 ## 開発・ライセンス
 
+TypeScriptのCLIとPlaywright連携は `src/`、Goの生成・更新処理と単体テストは `internal/manual/` にあります。TypeScriptのテストは `tests/` に置きます。`npm pack` は `scripts/build.mjs` で配布用JavaScriptを `dist/` に生成します。
+
 GitHub Flowを採用します。最新の `main` から変更ごとに作業ブランチを作り、`main` 宛てのプルリクエストでCIの成功を確認してマージします。マージ後は作業ブランチを削除します。
 
 ブランチ名は `<種類>/<変更内容>` とし、変更内容は英小文字と数字を使い、単語をハイフンで区切ります。種類は変更の主目的で選びます。
