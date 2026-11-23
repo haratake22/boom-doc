@@ -8,8 +8,10 @@ import { tmpdir } from 'node:os';
 test('install the packed CLI, generate, update and export a consumer manual', t => {
   const dir = mkdtempSync(join(tmpdir(), 'boom-consumer-'));
   t.after(() => rmSync(dir, {recursive:true, force:true}));
-  const npm = (args, cwd) => execFileSync(process.execPath, [process.env.npm_execpath, ...args], {cwd, encoding:'utf8'});
-  const [pack] = JSON.parse(npm(['pack','--json','--pack-destination',dir], process.cwd()));
+  const npmPath = process.env.npm_execpath;
+  assert.ok(npmPath, 'Run this test with npm test');
+  const npm = (args: string[], cwd: string) => execFileSync(process.execPath, [npmPath, ...args], {cwd, encoding:'utf8'});
+  const [pack]: { filename: string; files: { path: string }[] }[] = JSON.parse(npm(['pack','--json','--pack-destination',dir], process.cwd()));
   assert.ok(pack.files.some(f => f.path === 'LICENSE'));
   assert.ok(!pack.files.some(f => f.path === 'TASKS.md'));
   writeFileSync(join(dir,'package.json'), '{"private":true,"type":"module"}');
@@ -25,11 +27,11 @@ test('install the packed CLI, generate, update and export a consumer manual', t 
       if (process.env.RUN_MODE === 'fail' || (process.env.RUN_MODE === 'retry' && info.retry === 0))
         throw Error('Simulated failed attempt');
     });`);
-  const cli = (args, label='Save', mode='normal') => execFileSync(process.execPath, [join(dir,'node_modules/boom-doc/cli.js'), ...args],
+  const cli = (args: string[], label='Save', mode='normal') => execFileSync(process.execPath, [join(dir,'node_modules/boom-doc/cli.js'), ...args],
     {cwd:dir, env:{...process.env, LABEL:label, RUN_MODE:mode}, stdio:'pipe'});
-  const generate = (label, mode) => cli(['generate','playwright.config.ts','manual'],label,mode);
+  const generate = (label = 'Save', mode = 'normal') => cli(['generate','playwright.config.ts','manual'],label,mode);
   const path = join(dir,'manual/manual.md');
-  const read = p => readFileSync(p,'utf8');
+  const read = (p: string) => readFileSync(p,'utf8');
   generate();
   assert.match(read(path), /1\. Save/);
   const edited = read(path) + '\nUser note.\n';

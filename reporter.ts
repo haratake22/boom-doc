@@ -4,7 +4,7 @@ import { writeFileSync, readFileSync } from 'node:fs';
 export default class ManualReporter implements Reporter {
   skipped = false;
   chapters = new Map<string, {title: string, start: number, steps: {title: string, image: string}[]}>();
-  onTestEnd(test: TestCase, result: TestResult) {
+  onTestEnd(test: Pick<TestCase, 'id' | 'title'>, result: Pick<TestResult, 'status' | 'startTime' | 'attachments'>) {
     if (result.status === 'skipped') this.skipped = true;
     if (result.status !== 'passed') return;
     const steps = result.attachments.filter(a => a.name.startsWith('boom-doc:')).map(a => ({
@@ -12,7 +12,7 @@ export default class ManualReporter implements Reporter {
     }));
     if (steps.length) this.chapters.set(test.id, {title: test.title, start: +result.startTime, steps});
   }
-  onEnd(result: FullResult) {
+  onEnd(result: Pick<FullResult, 'status'>) {
     if (result.status === 'passed' && !this.skipped && process.env.BOOM_RECORD)
       writeFileSync(process.env.BOOM_RECORD, JSON.stringify([...this.chapters.values()]));
   }
