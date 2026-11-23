@@ -5,6 +5,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -58,18 +59,23 @@ func update(base, manual, draft string) error {
 }
 
 func main() {
+	os.Exit(run(os.Args[1:], os.Stderr))
+}
+
+func run(args []string, stderr io.Writer) int {
 	var err error
 	switch {
-	case len(os.Args) >= 4 && os.Args[1] == "generate":
-		err = generate(os.Args[2], os.Args[3], os.Args[4:])
-	case len(os.Args) == 4:
-		err = update(os.Args[1], os.Args[2], os.Args[3])
+	case len(args) >= 3 && args[0] == "generate":
+		err = generate(args[1], args[2], args[3:])
+	case len(args) == 3:
+		err = update(args[0], args[1], args[2])
 	default:
-		fmt.Fprintln(os.Stderr, "usage: go run . generate <record> <directory> [chapters...] | go run . <previous-draft> <manual> <new-draft>")
-		os.Exit(2)
+		fmt.Fprintln(stderr, "usage: go run . generate <record> <directory> [chapters...] | go run . <previous-draft> <manual> <new-draft>")
+		return 2
 	}
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		fmt.Fprintln(stderr, err)
+		return 1
 	}
+	return 0
 }

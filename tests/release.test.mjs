@@ -17,14 +17,17 @@ test('install the packed CLI, generate, update and export a consumer manual', t 
   writeFileSync(join(dir,'playwright.config.ts'), "export default {use:{channel:process.env.BOOM_BROWSER_CHANNEL}}");
   writeFileSync(join(dir,'manual.spec.ts'), `
     import { test } from 'boom-doc/fixture';
-    test('Settings', async ({page, manualStep}) => {
+    test('Settings', async ({page, manualStep}, info) => {
       const label = process.env.LABEL;
+      test.skip(process.env.RUN_MODE === 'skip');
       await page.setContent('<button>' + label + '</button>');
       await manualStep(label, () => page.getByRole('button', {name:label}).click());
+      if (process.env.RUN_MODE === 'fail' || (process.env.RUN_MODE === 'retry' && info.retry === 0))
+        throw Error('Simulated failed attempt');
     });`);
-  const cli = (args, label='Save') => execFileSync(process.execPath, [join(dir,'node_modules/boom-doc/cli.js'), ...args],
-    {cwd:dir, env:{...process.env, LABEL:label}, stdio:'pipe'});
-  const generate = label => cli(['generate','playwright.config.ts','manual'],label);
+  const cli = (args, label='Save', mode='normal') => execFileSync(process.execPath, [join(dir,'node_modules/boom-doc/cli.js'), ...args],
+    {cwd:dir, env:{...process.env, LABEL:label, RUN_MODE:mode}, stdio:'pipe'});
+  const generate = (label, mode) => cli(['generate','playwright.config.ts','manual'],label,mode);
   const path = join(dir,'manual/manual.md');
   const read = p => readFileSync(p,'utf8');
   generate();
@@ -33,7 +36,16 @@ test('install the packed CLI, generate, update and export a consumer manual', t 
   writeFileSync(path,edited);
   generate();
   assert.equal(read(path), edited);
-  generate('Submit');
+  const base = join(dir,'manual/.boom-base.md');
+  const original = read(base);
+  for (const mode of ['fail','skip']) {
+    assert.throws(() => generate('Unfinished',mode));
+    assert.equal(read(path),edited);
+    assert.equal(read(base),original);
+  }
+  writeFileSync(join(dir,'playwright.config.ts'), "export default {retries:1,use:{channel:process.env.BOOM_BROWSER_CHANNEL}}");
+  generate('Submit','retry');
+  assert.equal(read(path).match(/1\. Submit/g)?.length,1);
   assert.match(read(path), /1\. Submit/);
   assert.match(read(path), /User note/);
   for (const ext of ['html','pdf','docx']) {
@@ -42,7 +54,6 @@ test('install the packed CLI, generate, update and export a consumer manual', t 
   }
   const conflict = read(path).replace('1. Submit','1. Edited');
   writeFileSync(path,conflict);
-  const base = join(dir,'manual/.boom-base.md');
   const previous = read(base);
   assert.throws(() => generate('Confirm'), /could not merge/);
   assert.equal(read(path),conflict);
