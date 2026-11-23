@@ -58,18 +58,17 @@ func update(base, manual, draft string) error {
 }
 
 func main() {
-	if len(os.Args) >= 4 && os.Args[1] == "generate" {
-		if err := generate(os.Args[2], os.Args[3], os.Args[4:]); err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-		return
-	}
-	if len(os.Args) != 4 {
-		fmt.Fprintln(os.Stderr, "usage: go run . <previous-draft.md> <edited-manual.md> <new-draft.md>")
+	var err error
+	switch {
+	case len(os.Args) >= 4 && os.Args[1] == "generate":
+		err = generate(os.Args[2], os.Args[3], os.Args[4:])
+	case len(os.Args) == 4:
+		err = update(os.Args[1], os.Args[2], os.Args[3])
+	default:
+		fmt.Fprintln(os.Stderr, "usage: go run . generate <record> <directory> [chapters...] | go run . <previous-draft> <manual> <new-draft>")
 		os.Exit(2)
 	}
-	if err := update(os.Args[1], os.Args[2], os.Args[3]); err != nil {
+	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

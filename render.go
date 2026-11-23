@@ -26,24 +26,23 @@ type step struct {
 
 // Hash independent images concurrently; rendering still follows the recorded order.
 func hashImages(chapters []chapter, workers int) {
-	var steps []*step
-	for _, c := range chapters {
-		for i := range c.Steps {
-			steps = append(steps, &c.Steps[i])
-		}
-	}
-	workers = min(len(steps), max(1, workers))
+	jobs := make(chan *step)
 	var wg sync.WaitGroup
-	for worker := 0; worker < workers; worker++ {
+	for range max(1, workers) {
 		wg.Add(1)
-		go func(offset int) {
+		go func() {
 			defer wg.Done()
-			for i := offset; i < len(steps); i += workers {
-				s := steps[i]
+			for s := range jobs {
 				s.filename = fmt.Sprintf("%x.png", sha256.Sum256(s.Image))
 			}
-		}(worker)
+		}()
 	}
+	for _, c := range chapters {
+		for i := range c.Steps {
+			jobs <- &c.Steps[i]
+		}
+	}
+	close(jobs)
 	wg.Wait()
 }
 
@@ -58,22 +57,22 @@ func orderChapters(chapters []chapter, order []string) error {
 			}
 			return chapters[i].Start < chapters[j].Start
 		})
-	} else {
-		if len(order) != len(chapters) {
-			return fmt.Errorf("order must list every chapter exactly once")
+		return nil
+	}
+	if len(order) != len(chapters) {
+		return fmt.Errorf("order must list every chapter exactly once")
+	}
+	byTitle := make(map[string]chapter, len(chapters))
+	for _, c := range chapters {
+		byTitle[c.Title] = c
+	}
+	for i, title := range order {
+		c, ok := byTitle[title]
+		if !ok {
+			return fmt.Errorf("unknown or repeated chapter: %s", title)
 		}
-		byTitle := make(map[string]chapter, len(chapters))
-		for _, c := range chapters {
-			byTitle[c.Title] = c
-		}
-		for i, title := range order {
-			c, ok := byTitle[title]
-			if !ok {
-				return fmt.Errorf("unknown or repeated chapter: %s", title)
-			}
-			chapters[i] = c
-			delete(byTitle, title)
-		}
+		chapters[i] = c
+		delete(byTitle, title)
 	}
 	return nil
 }
@@ -112,11 +111,15 @@ func generate(record, directory string, order []string) error {
 			fmt.Fprintf(&md, "\n1. %s\n\n   ![操作後の画面](assets/%s)\n", s.Title, name)
 		}
 	}
+	return saveDraft(directory, md.String())
+}
+
+func saveDraft(directory, draft string) error {
 	base := filepath.Join(directory, ".boom-base.md")
 	manual := filepath.Join(directory, "manual.md")
 	old, be := os.ReadFile(base)
 	_, me := os.Stat(manual)
-	if be == nil && me == nil && string(old) == md.String() {
+	if be == nil && me == nil && string(old) == draft {
 		return nil
 	}
 	next, err := os.CreateTemp(directory, ".draft-*")
@@ -124,7 +127,7 @@ func generate(record, directory string, order []string) error {
 		return err
 	}
 	defer os.Remove(next.Name())
-	_, err = next.WriteString(md.String())
+	_, err = next.WriteString(draft)
 	closeErr := next.Close()
 	if err != nil {
 		return err
@@ -134,7 +137,7 @@ func generate(record, directory string, order []string) error {
 	}
 	switch {
 	case os.IsNotExist(be) && os.IsNotExist(me):
-		if err := os.WriteFile(manual, []byte(md.String()), 0644); err != nil {
+		if err := os.WriteFile(manual, []byte(draft), 0644); err != nil {
 			return err
 		}
 	case be == nil && me == nil:
