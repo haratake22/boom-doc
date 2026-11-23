@@ -9,7 +9,7 @@ import { marked } from 'marked';
 import sanitize from 'sanitize-html';
 import toDocx from '@turbodocx/html-to-docx';
 
-const root = import.meta.dirname;
+const root = dirname(import.meta.dirname);
 const require = createRequire(import.meta.url);
 const [command, input, output, orderFile] = process.argv.slice(2);
 function run(exe: string, args: string[], cwd: string, env = process.env) {
@@ -22,10 +22,10 @@ if (command === 'generate' && input && output) {
   try {
     const record = join(dir, 'run.json');
     run(process.execPath, [require.resolve('@playwright/test/cli'), 'test', '--config', resolve(input),
-      '--reporter', join(root, 'reporter' + extname(import.meta.filename))], process.cwd(), {...process.env, BOOM_RECORD: record});
+      '--reporter', join(import.meta.dirname, 'reporter' + extname(import.meta.filename))], process.cwd(), {...process.env, BOOM_RECORD: record});
     const order = orderFile ? JSON.parse(readFileSync(orderFile, 'utf8')) : [];
     if (!Array.isArray(order) || !order.every(t => typeof t === 'string')) throw Error('Expected an array of test titles');
-    run('go', ['run', '.', 'generate', record, resolve(output), ...order], root);
+    run('go', ['run', './internal/manual', 'generate', record, resolve(output), ...order], root);
   } finally { rmSync(dir, {recursive:true, force:true}); }
 } else if (command === 'export' && input && output) {
   const body = sanitize(await marked.parse(readFileSync(input, 'utf8')), {

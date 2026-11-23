@@ -27,7 +27,7 @@ test('install the packed CLI, generate, update and export a consumer manual', t 
       if (process.env.RUN_MODE === 'fail' || (process.env.RUN_MODE === 'retry' && info.retry === 0))
         throw Error('Simulated failed attempt');
     });`);
-  const cli = (args: string[], label='Save', mode='normal') => execFileSync(process.execPath, [join(dir,'node_modules/boom-doc/cli.js'), ...args],
+  const cli = (args: string[], label='Save', mode='normal') => execFileSync(process.execPath, [npmPath, 'exec', '--offline', '--', 'boom-doc', ...args],
     {cwd:dir, env:{...process.env, LABEL:label, RUN_MODE:mode}, stdio:'pipe'});
   const generate = (label = 'Save', mode = 'normal') => cli(['generate','playwright.config.ts','manual'],label,mode);
   const path = join(dir,'manual/manual.md');
