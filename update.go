@@ -58,12 +58,23 @@ func update(base, manual, draft string) error {
 }
 
 func main() {
+	const (
+		commandArg      = 1
+		recordArg       = 2
+		outputDirArg    = 3
+		firstChapterArg = 4
+	)
+	const (
+		previousDraftArg = 1
+		editedManualArg  = 2
+		newDraftArg      = 3
+	)
 	var err error
 	switch {
-	case len(os.Args) >= 4 && os.Args[1] == "generate":
-		err = generate(os.Args[2], os.Args[3], os.Args[4:])
-	case len(os.Args) == 4:
-		err = update(os.Args[1], os.Args[2], os.Args[3])
+	case len(os.Args) >= firstChapterArg && os.Args[commandArg] == "generate":
+		err = generate(os.Args[recordArg], os.Args[outputDirArg], os.Args[firstChapterArg:])
+	case len(os.Args) == newDraftArg+1:
+		err = update(os.Args[previousDraftArg], os.Args[editedManualArg], os.Args[newDraftArg])
 	default:
 		fmt.Fprintln(os.Stderr, "usage: go run . generate <record> <directory> [chapters...] | go run . <previous-draft> <manual> <new-draft>")
 		os.Exit(2)
