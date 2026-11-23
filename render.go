@@ -6,28 +6,48 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
+	"sync"
 )
 
 type chapter struct {
 	Title string
 	Start int64
-	Steps []struct {
-		Title string
-		Image []byte
-	}
+	Steps []step
 }
 
-func generate(record, directory string, order []string) error {
-	data, err := os.ReadFile(record)
-	if err != nil {
-		return err
+type step struct {
+	Title    string
+	Image    []byte
+	filename string
+}
+
+// Hash independent images concurrently; rendering still follows the recorded order.
+func hashImages(chapters []chapter, workers int) {
+	var steps []*step
+	for _, c := range chapters {
+		for i := range c.Steps {
+			steps = append(steps, &c.Steps[i])
+		}
 	}
-	var chapters []chapter
-	if err := json.Unmarshal(data, &chapters); err != nil {
-		return err
+	workers = min(len(steps), max(1, workers))
+	var wg sync.WaitGroup
+	for worker := 0; worker < workers; worker++ {
+		wg.Add(1)
+		go func(offset int) {
+			defer wg.Done()
+			for i := offset; i < len(steps); i += workers {
+				s := steps[i]
+				s.filename = fmt.Sprintf("%x.png", sha256.Sum256(s.Image))
+			}
+		}(worker)
 	}
+	wg.Wait()
+}
+
+func orderChapters(chapters []chapter, order []string) error {
 	if len(chapters) == 0 {
 		return fmt.Errorf("no documented steps captured")
 	}
@@ -55,6 +75,22 @@ func generate(record, directory string, order []string) error {
 			delete(byTitle, title)
 		}
 	}
+	return nil
+}
+
+func generate(record, directory string, order []string) error {
+	data, err := os.ReadFile(record)
+	if err != nil {
+		return err
+	}
+	var chapters []chapter
+	if err := json.Unmarshal(data, &chapters); err != nil {
+		return err
+	}
+	if err := orderChapters(chapters, order); err != nil {
+		return err
+	}
+	hashImages(chapters, runtime.GOMAXPROCS(0))
 	assets := filepath.Join(directory, "assets")
 	if err := os.MkdirAll(assets, 0755); err != nil {
 		return err
@@ -64,7 +100,7 @@ func generate(record, directory string, order []string) error {
 	for _, c := range chapters {
 		fmt.Fprintf(&md, "\n## %s\n", c.Title)
 		for _, s := range c.Steps {
-			name := fmt.Sprintf("%x.png", sha256.Sum256(s.Image))
+			name := s.filename
 			path := filepath.Join(assets, name)
 			if _, err := os.Stat(path); os.IsNotExist(err) {
 				if err := os.WriteFile(path, s.Image, 0644); err != nil {
