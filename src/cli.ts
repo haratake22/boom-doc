@@ -17,17 +17,28 @@ function run(exe: string, args: string[], cwd: string, env = process.env) {
   if (result.error) throw result.error;
   if (result.status !== 0) throw Error(exe + ' failed');
 }
+function readOrder(path: string): string[] {
+  const text = readFileSync(path, 'utf8');
+  let order: unknown;
+  try { order = JSON.parse(text); }
+  catch (cause) { throw Error(`Invalid JSON in order file: ${path}`, {cause}); }
+  if (!Array.isArray(order) || !order.every(title => typeof title === 'string'))
+    throw Error(`Expected an array of test titles in order file: ${path}`);
+  return order;
+}
 if (command === 'generate' && input && output) {
+  const order = orderFile ? readOrder(orderFile) : [];
   const dir = mkdtempSync(join(tmpdir(), 'boom-doc-'));
   try {
     const record = join(dir, 'run.json');
     run(process.execPath, [require.resolve('@playwright/test/cli'), 'test', '--config', resolve(input),
       '--reporter', join(import.meta.dirname, 'reporter' + extname(import.meta.filename))], process.cwd(), {...process.env, BOOM_RECORD: record});
-    const order = orderFile ? JSON.parse(readFileSync(orderFile, 'utf8')) : [];
-    if (!Array.isArray(order) || !order.every(t => typeof t === 'string')) throw Error('Expected an array of test titles');
     run('go', ['run', './internal/manual', 'generate', record, resolve(output), ...order], root);
   } finally { rmSync(dir, {recursive:true, force:true}); }
 } else if (command === 'export' && input && output) {
+  const format = extname(output).toLowerCase();
+  if (!['.html', '.pdf', '.docx'].includes(format))
+    throw Error(`Unsupported output format: ${output}. Expected .html, .pdf or .docx`);
   const body = sanitize(await marked.parse(readFileSync(input, 'utf8')), {
     allowedTags: [...sanitize.defaults.allowedTags, 'img'],
     transformTags: { img: (_, attrs) => {
@@ -37,7 +48,7 @@ if (command === 'generate' && input && output) {
     } }, allowedSchemesByTag: {img:['data']},
   });
   const html = '<!doctype html><html lang="ja"><meta charset="utf-8"><title>操作マニュアル</title><style>img{max-width:100%;height:auto}body{font-family:sans-serif}</style><body>' + body + '</body></html>';
-  switch (extname(output).toLowerCase()) {
+  switch (format) {
     case '.html': writeFileSync(output, html); break;
     case '.docx': writeFileSync(output, await toDocx(html)); break;
     case '.pdf': {
@@ -46,6 +57,5 @@ if (command === 'generate' && input && output) {
       finally { await browser.close(); }
       break;
     }
-    default: throw Error('Expected .html, .pdf or .docx');
   }
 } else { throw Error('generate <playwright.config.ts> <output-dir> [order.json] | export <manual.md> <output-file>'); }

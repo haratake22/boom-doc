@@ -35,7 +35,8 @@ test('install the packed CLI, generate, update and export a consumer manual', as
   const generate = (label = 'Save', mode = 'normal') => cli(['generate','playwright.config.ts','manual'],label,mode);
   const path = join(dir,'manual/manual.md');
   const read = (p: string) => readFileSync(p,'utf8');
-  generate();
+  writeFileSync(join(dir,'order.json'), JSON.stringify(['Settings']));
+  cli(['generate','playwright.config.ts','manual','order.json']);
   assert.match(read(path), /1\. Save/);
   const note = '初回のみ管理者に連絡してください。';
   const label = '設定を保存';
@@ -45,6 +46,36 @@ test('install the packed CLI, generate, update and export a consumer manual', as
   assert.equal(read(path), edited);
   const base = join(dir,'manual/.boom-base.md');
   const original = read(base);
+  for (const [order, message] of [
+    ['[', /Error: Invalid JSON in order file: order.json/],
+    ['[42]', /Error: Expected an array of test titles in order file: order.json/],
+    ['["Unknown"]', /unknown or repeated chapter: Unknown/],
+  ] as const) {
+    writeFileSync(join(dir,'order.json'),order);
+    assert.throws(() => cli(['generate','playwright.config.ts','manual','order.json']),message);
+    assert.equal(read(path),edited);
+    assert.equal(read(base),original);
+  }
+
+  const missingImage = 'assets/' + '0'.repeat(64) + '.png';
+  for (const [ext, image, error] of [
+    ['txt', missingImage, /Error: Unsupported output format: .*out\.txt/],
+    ['html', 'unknown.png', /Error: Expected a generated asset: unknown\.png/],
+    ['html', missingImage, /ENOENT:.*0{64}\.png/],
+    ['pdf', missingImage, /ENOENT:.*0{64}\.png/],
+    ['docx', missingImage, /ENOENT:.*0{64}\.png/],
+  ] as const) {
+    const source = edited + '\n![missing](' + image + ')\n';
+    writeFileSync(path,source);
+    const destination = 'manual/out.' + ext;
+    const previousOutput = Buffer.from([0, 127, 255]);
+    writeFileSync(join(dir,destination),previousOutput);
+    assert.throws(() => cli(['export','manual/manual.md',destination]),error);
+    assert.deepEqual(readFileSync(join(dir,destination)),previousOutput);
+    assert.equal(read(path),source);
+    assert.equal(read(base),original);
+  }
+  writeFileSync(path,edited);
   for (const mode of ['fail','skip']) {
     assert.throws(() => generate('Unfinished',mode));
     assert.equal(read(path),edited);
