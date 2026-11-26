@@ -25,14 +25,14 @@ test('install the packed CLI, generate, update and export a consumer manual', as
     test('Settings', async ({page, manualStep}, info) => {
       const label = process.env.LABEL;
       test.skip(process.env.RUN_MODE === 'skip');
-      await page.setContent('<button>' + label + '</button>');
+      await page.setContent('<button style="color:' + (process.env.COLOR ?? 'black') + '">' + label + '</button>');
       await manualStep(label, () => page.getByRole('button', {name:label}).click());
       if (process.env.RUN_MODE === 'fail' || (process.env.RUN_MODE === 'retry' && info.retry === 0))
         throw Error('Simulated failed attempt');
     });`);
-  const cli = (args: string[], label='Save', mode='normal') => execFileSync(process.execPath, [npmPath, 'exec', '--offline', '--', 'boom-doc', ...args],
-    {cwd:dir, env:{...process.env, LABEL:label, RUN_MODE:mode}, stdio:'pipe'});
-  const generate = (label = 'Save', mode = 'normal') => cli(['generate','playwright.config.ts','manual'],label,mode);
+  const cli = (args: string[], label='Save', mode='normal', color='black') => execFileSync(process.execPath, [npmPath, 'exec', '--offline', '--', 'boom-doc', ...args],
+    {cwd:dir, env:{...process.env, LABEL:label, RUN_MODE:mode, COLOR:color}, stdio:'pipe'});
+  const generate = (label = 'Save', mode = 'normal', color = 'black') => cli(['generate','playwright.config.ts','manual'],label,mode,color);
   const path = join(dir,'manual/manual.md');
   const read = (p: string) => readFileSync(p,'utf8');
   writeFileSync(join(dir,'order.json'), JSON.stringify(['Settings']));
@@ -81,6 +81,30 @@ test('install the packed CLI, generate, update and export a consumer manual', as
     assert.equal(read(path),edited);
     assert.equal(read(base),original);
   }
+
+  // Only the screenshot changes: the image link is replaced and the note is kept.
+  const assetOf = (text: string) => text.match(/\((assets\/[a-f0-9]{64}\.png)\)/)?.[1];
+  const oldAsset = assetOf(edited);
+  assert.ok(oldAsset);
+  generate('Save','normal','red');
+  const recolored = read(path);
+  const newAsset = assetOf(recolored);
+  assert.ok(newAsset && newAsset !== oldAsset, 'the screenshot must change');
+  assert.equal(recolored, edited.replace(oldAsset, newAsset));
+  assert.notDeepEqual(readFileSync(join(dir,'manual',newAsset)), readFileSync(join(dir,'manual',oldAsset)));
+  assert.equal(read(base), original.replace(oldAsset, newAsset));
+
+  // A missing manual or baseline stops the update and keeps the remaining file.
+  for (const [missing, kept] of [[base, path], [path, base]]) {
+    const content = read(missing);
+    const keptContent = read(kept);
+    rmSync(missing);
+    assert.throws(() => generate(), /manual and baseline must both exist/);
+    assert.equal(read(kept), keptContent);
+    assert.throws(() => readFileSync(missing), /ENOENT/);
+    writeFileSync(missing, content);
+  }
+
   writeFileSync(join(dir,'playwright.config.ts'), "export default {retries:1,use:{channel:process.env.BOOM_BROWSER_CHANNEL}}");
   generate(label,'retry');
   assert.equal(read(path).split('1. ' + label).length,2);
