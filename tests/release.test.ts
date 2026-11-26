@@ -25,13 +25,13 @@ test('install the packed CLI, generate, update and export a consumer manual', as
     test('Settings', async ({page, manualStep}, info) => {
       const label = process.env.LABEL;
       test.skip(process.env.RUN_MODE === 'skip');
-      await page.setContent('<button style="color:' + (process.env.COLOR ?? 'black') + '">' + label + '</button>');
+      await page.setContent('<button style="color:' + (process.env.BUTTON_COLOR ?? 'black') + '">' + label + '</button>');
       await manualStep(label, () => page.getByRole('button', {name:label}).click());
       if (process.env.RUN_MODE === 'fail' || (process.env.RUN_MODE === 'retry' && info.retry === 0))
         throw Error('Simulated failed attempt');
     });`);
   const cli = (args: string[], label='Save', mode='normal', color='black') => execFileSync(process.execPath, [npmPath, 'exec', '--offline', '--', 'boom-doc', ...args],
-    {cwd:dir, env:{...process.env, LABEL:label, RUN_MODE:mode, COLOR:color}, stdio:'pipe'});
+    {cwd:dir, env:{...process.env, LABEL:label, RUN_MODE:mode, BUTTON_COLOR:color}, stdio:'pipe'});
   const generate = (label = 'Save', mode = 'normal', color = 'black') => cli(['generate','playwright.config.ts','manual'],label,mode,color);
   const path = join(dir,'manual/manual.md');
   const read = (p: string) => readFileSync(p,'utf8');
