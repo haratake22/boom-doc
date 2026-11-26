@@ -73,6 +73,15 @@ GitHub Flowを採用します。最新の `main` から変更ごとに作業ブ�
 | `refactor` | 動作を保つ実装修正 | `refactor/markdown-merge` |
 | `chore` | 依存関係・CI・リリース準備 | `chore/update-playwright` |
 
+コミットメッセージは [Conventional Commits](https://www.conventionalcommits.org/ja/v1.0.0/) に従い、1行目を `<種類>(<対象>): <要約>` とします。種類はブランチ名と同じ6種類から、そのコミットの主目的で選びます。対象は `cli`・`manual`・`export`・`reporter` など変更箇所を示す名前で、省略する場合は `<種類>: <要約>` とします。要約は英語の命令形で書き始め、末尾にピリオドを付けません。詳しい説明が必要な場合は、1行空けて本文を書きます。
+
+```text
+fix(cli): validate the order file before running tests
+test(export): verify Japanese text and screenshots in exported manuals
+refactor: separate TypeScript sources from the Go manual generator
+docs: document the commit message convention
+```
+
 boom-docディレクトリで `npm ci`、`npx playwright install chromium`、`npm test` を順に実行すると、配布ファイルを別プロジェクトに導入して生成・更新・出力を検証します。
 
 [MIT License](LICENSE)
